@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Ventas{% endblock %}
+
+{% block conte %}
+	<div class="panel panel-info offer">
+		<div class="panel-heading">
+			<form id="formxD">
+				<div class="form-group">
+					<label for="codigo">Codigo de barras</label>
+                    <button id="cancelar" type="button" class="btn btn-danger btn-xs pull-right">Cancelar cuenta</button>
+					<input type="text" class="form-control" id="codigo" name="codigo" placeholder="Introduce el codigo de barras del producto">
+				</div>
+			</form>
+		</div>
+		<div class="panel-body">
+			<table class="table table-hover">
+				<thead>
+					<tr>
+						<td>Producto</td>
+						<td>Precio</td>
+						<td>Mayoreo</td>
+					</tr>
+				</thead>
+				<tbody id='tbusqueda'> 
+				</tbody>
+			</table>
+		</div>
+		<div class="panel-footer">
+			<table class="table table-hover">
+				<thead>
+					<tr>
+                        <td>Codigo</td>
+						<td>Producto</td>
+						<td>Precio</td>
+						<td>Mayoreo</td>
+						<td></td>
+					</tr>
+				</thead>
+				<tbody id="tVentaProd">
+                    {% if data %}
+                        {% for item in data %}
+                            <tr class="success">
+                                <td class="cod">{{item.codigo}}</td>
+                                <td>{{item.descripcion}}</td>
+                                <td>{{item.punitario}}</td>
+                                <td>{{item.pmayoreo}}</td>
+                                <td>{{item.cantidad}}</td>
+                                <td><button type="button" class="btn btn-success btn-xs aumentar"><span class="glyphicon glyphicon-plus-sign"></span></button><button type="button" class="btn btn-warning btn-xs eliminar pull-right"><span class="glyphicon glyphicon-minus-sign"></span></button></td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+				</tbody>
+				<tfoot>
+					<tr class="success">
+						<td>Total:</td>
+						<td class="total">{{precio}}</td>
+                        <td></td>
+                        <td></td>
+						<td>Subtotal:</td>
+						<td></td>
+					</tr>  
+				</tfoot>
+			</table>
+		</div>
+	
+	</div>
+
+{% endblock %}
+
+{% block script %}
+	<script type="text/javascript">
+	    $(document).ready($('#codigo').focus());
+
+        $('#cancelar').on('click', Cancelar);
+
+        function Cancelar(e){
+            $.ajax({
+                async : false,
+                url : '{% url 'Venta:url_cancelar_cuenta_ajax' %}',
+                type : 'get',
+                success : function(data){
+                    console.log(data.listo);
+                    $('#tVentaProd').html('');
+                    $('.total').html('');
+                }
+            });
+            $('#codigo').focus();
+        }
+
+        $('#tVentaProd').on('click', '.aumentar', AumentarFil);
+
+        function AumentarFil(e){
+        	var parent = $(this).parent().parent().html();
+            var cod = $(parent).html();
+            $.ajax({
+                async: false,
+                data : {'cod': cod},
+                url : '/Ajax/Aumentar/',
+                type : 'get',
+                success : function(data){
+                    var htmlp = ''
+                    $.each(data, function(i, item){
+                        htmlp = htmlp+'<tr class="success"><td class="cod">'+item.codigo+'</td><td>'+item.descripcion+'</td><td>'+item.punitario+'</td><td>'+item.pmayoreo+'</td><td>'+item.cantidad+'</td><td><button type="button" class="btn btn-success btn-xs aumentar"><span class="glyphicon glyphicon-plus-sign"></span></button><button type="button" class="btn btn-warning btn-xs eliminar pull-right"><span class="glyphicon glyphicon-minus-sign"></span></button></td></tr>'
+                    });
+                    $('#tVentaProd').html(htmlp);
+                }
+            });
+			//$(parent).remove();
+			$(Total());
+            $('#codigo').focus();
+        }
+
+        $('#tVentaProd').on('click', '.eliminar', EliminarFil);
+
+        function EliminarFil(e){
+        	var parent = $(this).parent().parent().html();
+            var cod = $(parent).html();
+            $.ajax({
+                async: false,
+                data : {'cod': cod},
+                url : '/Ajax/Remover/',
+                type : 'get',
+                success : function(data){
+                    var htmlp = ''
+                    $.each(data, function(i, item){
+                        htmlp = htmlp+'<tr class="success"><td class="cod">'+item.codigo+'</td><td>'+item.descripcion+'</td><td>'+item.punitario+'</td><td>'+item.pmayoreo+'</td><td>'+item.cantidad+'</td><td><button type="button" class="btn btn-success btn-xs aumentar"><span class="glyphicon glyphicon-plus-sign"></span></button><button type="button" class="btn btn-warning btn-xs eliminar pull-right"><span class="glyphicon glyphicon-minus-sign"></span></button></td></tr>'
+                    });
+                    $('#tVentaProd').html(htmlp);
+                }
+            });
+			//$(parent).remove();
+			$(Total());
+            $('#codigo').focus();
+        }
+
+		
+        $('#formxD').on('submit',Buscarpro);
+
+        function Buscarpro(e){
+            var dato = $('#codigo').val();
+            $('#codigo').val('').focus();
+            $.ajax({
+                async: false,
+            	data : {'cod': dato},
+            	url : '/Ajax/Buscar/',
+            	type : 'get',
+            	success: function(data){
+                    var htmlp = ''
+                    $.each(data, function(i, item){
+                        htmlp = htmlp+'<tr class="success"><td class="cod">'+item.codigo+'</td><td>'+item.descripcion+'</td><td>'+item.punitario+'</td><td>'+item.pmayoreo+'</td><td>'+item.cantidad+'</td><td><button type="button" class="btn btn-success btn-xs aumentar"><span class="glyphicon glyphicon-plus-sign"></span></button><button type="button" class="btn btn-warning btn-xs eliminar pull-right"><span class="glyphicon glyphicon-minus-sign"></span></button></td></tr>'
+                    });
+                    $('#tVentaProd').html(htmlp);
+
+            	}
+            });
+
+            $(Total());
+            return false;
+        }
+
+        function Total(){
+            $.ajax({
+                url : '/Ajax/Calular/',
+                type : 'get',
+                success : function(data){
+                    $('.total').html(data.precio);
+                }
+            });
+		}
+    </script>
+    
+{% endblock %}
