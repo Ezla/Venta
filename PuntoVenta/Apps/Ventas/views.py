@@ -5,6 +5,7 @@ from django.core.urlresolvers import reverse_lazy
 from django.contrib.auth import login, logout
 from .forms import AuthenticationFormCustom
 from Apps.Producto.models import Producto
+from .logica import calcul_p
 from decimal import Decimal
 
 class Login(FormView):
@@ -45,16 +46,12 @@ class Venta(LoginRequiredMixin, TemplateView):
     template_name = 'Venta/index.html'
 
     def dispatch(self, request, *args, **kwargs):
-        print request.session['cuenta']
         return super(Venta, self).dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
         context = super(Venta, self).get_context_data(**kwargs)
         context['data'] = self.request.session['cuenta']
-        precio = 0
-        if self.request.session['cuenta']:
-            for x in self.request.session['cuenta']:
-                precio = precio + (float(x['punitario']) * int(x['cantidad']))
+        precio = calcul_p(self.request)
         context['precio'] = precio
         return context
 
@@ -77,13 +74,13 @@ class Venta_Buscar_Producto(LoginRequiredMixin, View):
                     request.session['cuenta'].append({'codigo': prod.codigo, 'descripcion': prod.descripcion, 'punitario':str(prod.punitario), 'pmayoreo':str(prod.pmayoreo), 'cantidad':str(1)})
             else:
                 request.session['cuenta'].append({'codigo': prod.codigo, 'descripcion': prod.descripcion, 'punitario':str(prod.punitario), 'pmayoreo':str(prod.pmayoreo), 'cantidad':str(1)})
-
-            data = JsonResponse(request.session['cuenta'], safe=False)
+            precio = calcul_p(request)
+            data = JsonResponse({'cuenta': request.session['cuenta'],'precio': precio})
         except Exception:
-            #data = JsonResponse({'descripcion': 'No se encontro el producto'})
-            data = JsonResponse(request.session['cuenta'], safe=False)
+            precio = calcul_p(request)
+            data = JsonResponse({'cuenta': request.session['cuenta'],'precio': precio})
 
-        print request.session['cuenta']
+
         request.session.save()
         return HttpResponse(data, content_type='application/json')
 
@@ -100,7 +97,8 @@ class Venta_Remover_Prod(LoginRequiredMixin, View):
                         request.session['cuenta'].remove(x)
                     break
         request.session.save()
-        data = JsonResponse(request.session['cuenta'], safe=False)
+        precio = calcul_p(request)
+        data = JsonResponse({'cuenta': request.session['cuenta'],'precio': precio})
         return HttpResponse(data, content_type='application/json')
 
 
@@ -114,19 +112,9 @@ class Venta_Aumentar_Prod(View):
                     x['cantidad'] = str(int(x['cantidad']) + 1)
                     break
         request.session.save()
-        data = JsonResponse(request.session['cuenta'], safe=False)
+        precio = calcul_p(request)
+        data = JsonResponse({'cuenta': request.session['cuenta'],'precio': precio})
         return HttpResponse(data, 'application/json')
-
-
-class Venta_Calcula_Precio(LoginRequiredMixin, View):
-
-    def get(self, request, *args, **kwargs):
-        precio = 0
-        if request.session['cuenta']:
-            for x in request.session['cuenta']:
-                precio = precio + (Decimal(x['punitario']) * Decimal(x['cantidad']))
-        data = JsonResponse({'precio': precio})
-        return HttpResponse(data, content_type='application/json')
 
 
 class Venta_Cancelar_Cuenta(LoginRequiredMixin, View):
